@@ -22,6 +22,18 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "8002:8000"
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/taskdb
+
+  worker:
+    build: ./backend-app
+    container_name: task_worker
+    working_dir: /app
+    command: python worker/worker.py
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/taskdb
+  

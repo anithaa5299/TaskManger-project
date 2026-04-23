@@ -3,6 +3,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 import os
 
+print("🔥 WORKER STARTED", flush=True)
+
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://postgres:postgres@db:5432/taskdb"
@@ -11,25 +13,18 @@ DATABASE_URL = os.getenv(
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
+while True:
+    try:
+        db = SessionLocal()
 
-def process_tasks():
-    while True:
-        try:
-            db = SessionLocal()
+        result = db.execute(text("SELECT COUNT(*) FROM tasks"))
+        count = result.scalar()
 
-            result = db.execute(text("SELECT COUNT(*) FROM tasks"))
-            count = result.scalar()
+        print(f"[WORKER] Total tasks: {count}", flush=True)
 
-            print(f"[WORKER] Total tasks: {count}")
+        db.close()
 
-            db.close()
+    except Exception as e:
+        print("[WORKER ERROR]", e, flush=True)
 
-        except Exception as e:
-            print("[WORKER ERROR]", e)
-
-        time.sleep(5)
-
-
-if __name__ == "__main__":
-    print("[WORKER] Started...")
-    process_tasks()
+    time.sleep(5)
