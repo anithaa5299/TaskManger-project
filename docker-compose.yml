@@ -34,6 +34,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/taskdb
-  
+      rabbitmq:
+        condition: service_started
+    
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: task_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"

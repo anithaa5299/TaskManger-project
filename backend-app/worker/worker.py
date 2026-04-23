@@ -1,30 +1,31 @@
-import time
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
-import os
+import pika
+import json
 
-print("🔥 WORKER STARTED", flush=True)
+print("🔥 WORKER STARTING...", flush=True)
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:postgres@db:5432/taskdb"
-)
+try:
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host="rabbitmq")
+    )
 
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(bind=engine)
+    channel = connection.channel()
+    channel.queue_declare(queue="tasks")
 
-while True:
-    try:
-        db = SessionLocal()
+    print("[WORKER] Connected to RabbitMQ", flush=True)
 
-        result = db.execute(text("SELECT COUNT(*) FROM tasks"))
-        count = result.scalar()
+    def callback(ch, method, properties, body):
+        data = json.loads(body)
+        print(f"[WORKER] Received task: {data}", flush=True)
 
-        print(f"[WORKER] Total tasks: {count}", flush=True)
+    print("[WORKER] Waiting for messages...", flush=True)
 
-        db.close()
+    channel.basic_consume(
+        queue="tasks",
+        on_message_callback=callback,
+        auto_ack=True
+    )
 
-    except Exception as e:
-        print("[WORKER ERROR]", e, flush=True)
+    channel.start_consuming()
 
-    time.sleep(5)
+except Exception as e:
+    print("❌ WORKER ERROR:", e, flush=True)

@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
+import pika
+import json
 from sqlalchemy.orm import Session
 from .db import Base, engine, get_db
 from .models import Task, User
@@ -10,6 +12,25 @@ app = FastAPI()
 
 # create tables
 Base.metadata.create_all(bind=engine)
+
+
+
+def publish_task_event(task_id, title):
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host="rabbitmq")
+    )
+    channel = connection.channel()
+
+    channel.queue_declare(queue="tasks")
+
+    message = json.dumps({
+        "task_id": task_id,
+        "title": title
+    })
+
+    channel.basic_publish(exchange="", routing_key="tasks", body=message)
+
+    connection.close()
 
 @app.post("/register")
 def register(user: UserCreate, db: Session = Depends(get_db)):
@@ -55,6 +76,8 @@ def create_task(
     db.commit()
     db.refresh(db_task)
 
+    publish_task_event(db_task.id, db_task.title)
+
     return db_task
 
 @app.get("/tasks")
@@ -85,6 +108,7 @@ def update_task(
 
     db.commit()
     db.refresh(task)
+    publish_task_event(task.id, task.title)
 
     return task
 
@@ -104,7 +128,7 @@ def delete_task(
 
     db.delete(task)
     db.commit()
-
+    publish_task_event(task.id, "deleted")
     return {"message": "deleted"}
 
 @app.get("/debug")
