@@ -110,3 +110,9 @@ def delete_task(
 @app.get("/debug")
 def debug(token: str = Depends(oauth2_scheme)):
     return {"token": token}
+
+from fastapi import Request
+
+@app.get("/debug-auth")
+def debug_auth(request: Request):
+    return dict(request.headers)
