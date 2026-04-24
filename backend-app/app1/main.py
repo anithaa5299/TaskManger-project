@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 import pika
+from fastapi.middleware.cors import CORSMiddleware
 import json
 from sqlalchemy.orm import Session
 from .db import Base, engine, get_db
@@ -9,7 +10,14 @@ from .schemas import TaskCreate,UserCreate,UserLogin
 from .auth import hash_password, verify_password, create_access_token, get_current_user, oauth2_scheme
 
 app = FastAPI()
-
+app.add_middleware(
+    CORSMiddleware,
+    # allow_origins=["http://localhost:5173"],  # frontend URL
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # create tables
 Base.metadata.create_all(bind=engine)
 
